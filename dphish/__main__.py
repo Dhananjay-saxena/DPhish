@@ -2,19 +2,16 @@
 import argparse
 import requests
 import whois
-import time
 import random
 from pyfiglet import Figlet
 from colorama import Fore, Style, init
 from urllib.parse import urlparse
+import base64
 
 # Initialize Colorama
 init(autoreset=True)
 
-# ------------------- CONFIG -------------------
-VIRUSTOTAL_API_KEY = "d28fe5015cb0b34fb9b644721c3fac7f6b5254cf5ca86fb052c2792332b461f2"
 VT_URL = "https://www.virustotal.com/api/v3/urls"
-# ----------------------------------------------
 
 # Animated Banner
 def animated_banner():
@@ -23,14 +20,13 @@ def animated_banner():
     print(Fore.GREEN + f.renderText("DPhish"))
 
 # VirusTotal URL Check
-import base64
-
-def virustotal_check(url):
+def virustotal_check(url, api_key):
     try:
-        # Encode URL in base64 (VT v3 requirement)
-        url_id = base64.urlsafe_b64encode(url.encode()).decode().strip("=")
+        if not api_key:
+            return {"error": "No API key provided. Use --vt_key <API_KEY>"}
 
-        headers = {"x-apikey": VIRUSTOTAL_API_KEY}
+        url_id = base64.urlsafe_b64encode(url.encode()).decode().strip("=")
+        headers = {"x-apikey": api_key}
         analysis = requests.get(f"{VT_URL}/{url_id}", headers=headers)
 
         if analysis.status_code != 200:
@@ -40,7 +36,6 @@ def virustotal_check(url):
     except Exception as e:
         return {"error": str(e)}
 
-
 # WHOIS Lookup
 def whois_lookup(domain):
     try:
@@ -49,17 +44,10 @@ def whois_lookup(domain):
     except Exception as e:
         return {"error": str(e)}
 
-# Fake Traffic Info (since Alexa API is dead, simulate logic)
+# Fake Traffic Info
 def get_traffic_info(domain):
-    try:
-        # Placeholder simulation
-        popular_sites = ["google.com", "youtube.com", "facebook.com", "twitter.com"]
-        if domain in popular_sites:
-            return "HIGH TRAFFIC"
-        else:
-            return "UNKNOWN DOMAIN"
-    except Exception as e:
-        return f"Error fetching traffic: {e}"
+    popular_sites = ["google.com", "youtube.com", "facebook.com", "twitter.com"]
+    return "HIGH TRAFFIC" if domain in popular_sites else "UNKNOWN DOMAIN"
 
 # URL Structure Analysis
 def analyze_url_structure(url):
@@ -89,6 +77,8 @@ def main():
     parser = argparse.ArgumentParser(description="DPhish - Phishing URL Analyzer")
     parser.add_argument("-u", "--url", required=True, help="URL to analyze")
     parser.add_argument("-a", "--all", action="store_true", help="Run full analysis")
+    parser.add_argument("-v", "--vt", action="store_true", help="Run only VirusTotal analysis")
+    parser.add_argument("--vt_key", help="Your VirusTotal API Key")
     args = parser.parse_args()
 
     url = args.url
@@ -98,10 +88,12 @@ def main():
     print(Fore.CYAN + f"[+] Analyzing: {url}")
     print("Domain:", domain)
 
-    # VirusTotal
-    if args.all:
+    vt_result = {}
+
+    # VirusTotal (if -v or -a is used)
+    if args.vt or args.all:
         print(Fore.YELLOW + "\n[+] VirusTotal Check:" + Style.RESET_ALL)
-        vt_result = virustotal_check(url)
+        vt_result = virustotal_check(url, args.vt_key)
         if "error" in vt_result:
             print(Fore.RED + f"[!] VirusTotal Error: {vt_result['error']}")
         else:
@@ -109,8 +101,10 @@ def main():
             print("Malicious:", stats.get("malicious", 0))
             print("Suspicious:", stats.get("suspicious", 0))
             print("Undetected:", stats.get("undetected", 0))
-    else:
-        vt_result = {}
+
+    # If only -v was given, exit after VT check
+    if args.vt and not args.all:
+        return
 
     # WHOIS Info
     print(Fore.YELLOW + "\n[+] WHOIS Info:" + Style.RESET_ALL)
