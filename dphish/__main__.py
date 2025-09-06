@@ -25,9 +25,18 @@ def virustotal_check(url, api_key):
         if not api_key:
             return {"error": "No API key provided. Use --vt_key <API_KEY>"}
 
-        url_id = base64.urlsafe_b64encode(url.encode()).decode().strip("=")
         headers = {"x-apikey": api_key}
-        analysis = requests.get(f"{VT_URL}/{url_id}", headers=headers)
+
+        # Step 1: Submit URL for analysis
+        submit = requests.post(VT_URL, headers=headers, data={"url": url})
+        if submit.status_code != 200:
+            return {"error": f"Submit failed: {submit.status_code}", "text": submit.text}
+
+        analysis_id = submit.json()["data"]["id"]
+
+        # Step 2: Fetch analysis results
+        analysis_url = f"https://www.virustotal.com/api/v3/analyses/{analysis_id}"
+        analysis = requests.get(analysis_url, headers=headers)
 
         if analysis.status_code != 200:
             return {"error": f"Status {analysis.status_code}", "text": analysis.text}
@@ -35,6 +44,7 @@ def virustotal_check(url, api_key):
         return analysis.json()
     except Exception as e:
         return {"error": str(e)}
+
 
 # WHOIS Lookup
 def whois_lookup(domain):
