@@ -15,7 +15,7 @@ VT_URL = "https://www.virustotal.com/api/v3/urls"
 
 # Animated Banner
 def animated_banner():
-    styles = ["slant", "block", "banner", "larry3d", "3-d"]
+    styles = ["slant", "block", "banner"]
     f = Figlet(font=random.choice(styles))
     print(Fore.GREEN + f.renderText("DPhish"))
 
