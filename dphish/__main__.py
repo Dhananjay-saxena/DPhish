@@ -6,7 +6,6 @@ import random
 from pyfiglet import Figlet
 from colorama import Fore, Style, init
 from urllib.parse import urlparse
-import base64
 
 # Initialize Colorama
 init(autoreset=True)
@@ -32,7 +31,9 @@ def virustotal_check(url, api_key):
         if submit.status_code != 200:
             return {"error": f"Submit failed: {submit.status_code}", "text": submit.text}
 
-        analysis_id = submit.json()["data"]["id"]
+        analysis_id = submit.json().get("data", {}).get("id")
+        if not analysis_id:
+            return {"error": "No analysis ID returned from VirusTotal"}
 
         # Step 2: Fetch analysis results
         analysis_url = f"https://www.virustotal.com/api/v3/analyses/{analysis_id}"
@@ -44,7 +45,6 @@ def virustotal_check(url, api_key):
         return analysis.json()
     except Exception as e:
         return {"error": str(e)}
-
 
 # WHOIS Lookup
 def whois_lookup(domain):
@@ -71,14 +71,15 @@ def analyze_url_structure(url):
 
 # Verdict Function
 def verdict(vt_result, traffic_info):
-    if isinstance(vt_result, dict) and "data" in vt_result:
-        stats = vt_result["data"]["attributes"]["last_analysis_stats"]
-        malicious = stats.get("malicious", 0)
-        if malicious > 0:
-            return "UNSAFE 🚨 (Malicious detections found)"
-        elif stats.get("undetected", 0) > 0:
-            return "LIKELY SAFE ✅ (No malicious detections)"
-    if traffic_info == "UNKNOWN DOMAIN":
+    stats = vt_result.get("data", {}).get("attributes", {}).get("last_analysis_stats", {})
+    malicious = stats.get("malicious", 0)
+    undetected = stats.get("undetected", 0)
+
+    if malicious > 0:
+        return "UNSAFE 🚨 (Malicious detections found)"
+    elif undetected > 0:
+        return "LIKELY SAFE ✅ (No malicious detections)"
+    elif traffic_info == "UNKNOWN DOMAIN":
         return "UNKNOWN ⚠️ (No traffic info, might be new domain)"
     return "SAFE ✅ (No issues found)"
 
@@ -107,7 +108,7 @@ def main():
         if "error" in vt_result:
             print(Fore.RED + f"[!] VirusTotal Error: {vt_result['error']}")
         else:
-            stats = vt_result["data"]["attributes"]["last_analysis_stats"]
+            stats = vt_result.get("data", {}).get("attributes", {}).get("last_analysis_stats", {})
             print("Malicious:", stats.get("malicious", 0))
             print("Suspicious:", stats.get("suspicious", 0))
             print("Undetected:", stats.get("undetected", 0))
