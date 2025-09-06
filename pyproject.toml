@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dphish-analyzer"              # PyPI package name (unique)
+version = "1.0.0"
+description = "Phishing URL analyzer (VirusTotal + WHOIS + Structure + traffic signal)"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "GPL-3.0-or-later"}
+authors = [{ name = "Dhananjay Saxena" }]
+keywords = ["phishing", "security", "url", "virustotal", "whois"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+  "Operating System :: OS Independent",
+]
+
+dependencies = [
+  "requests",
+  "tldextract",
+  "python-whois",
+  "colorama",
+  "pyfiglet",
+]
+
+[project.urls]
+Homepage = "https://github.com/<your-username>/DPhish"
+Issues   = "https://github.com/<your-username>/DPhish/issues"
+
+[project.scripts]
+dphish = "dphish.cli:main"            # installs `dphish` command
